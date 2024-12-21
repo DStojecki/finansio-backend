@@ -50,16 +50,30 @@ export class AuthenticationService {
             email: signInDto.email,
         });
         if (!user) {
-            throw new UnauthorizedException('User does not exists');
+            throw new UnauthorizedException({
+                field: 'email',
+                message: 'This email is not connected to any account'
+            });
         }
         const isEqual = await this.hashingService.compare(
             signInDto.password,
             user.password,
         );
         if (!isEqual) {
-            throw new UnauthorizedException('Password does not match');
+            throw new UnauthorizedException({
+                field: 'password',
+                message: 'Incorrect password'
+            });
         }
-        return await this.generateTokens(user);
+        const tokens = await this.generateTokens(user);
+
+        return {
+            user: {
+                email: user.email,
+                id: user.id
+            },
+            ...tokens
+        }
     }
 
     async refreshTokens(refreshTokenDto: RefreshTokenDto) {

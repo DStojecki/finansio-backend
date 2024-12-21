@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Saving } from 'src/savings/entities/saving.entity';
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany  } from 'typeorm';
 
 @Entity()
 export class User {
@@ -10,4 +11,7 @@ export class User {
 
   @Column()
   password: string;
+
+  @OneToMany(type => Saving, savings=>savings.user)
+  savings: Saving[]
 }

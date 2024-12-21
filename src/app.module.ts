@@ -1,19 +1,21 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CoffesModule } from './coffes/coffes.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { IamModule } from './iam/iam.module';
 import { DatabaseModule } from './database/database.module';
+import { SavingsModule } from './savings/savings.module';
+import { CurrencyModule } from './currency/currency.module';
 
 @Module({
   imports: [
-    CoffesModule, 
-    UsersModule, 
     ConfigModule.forRoot(),
+    UsersModule, 
     IamModule,
-    DatabaseModule
+    DatabaseModule,
+    SavingsModule,
+    CurrencyModule
     ],
   controllers: [AppController],
   providers: [AppService,],
