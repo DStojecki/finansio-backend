@@ -9,5 +9,7 @@ export class CreateSavingDto {
     @IsString()
     readonly currency: string;
 
+    readonly amount: number;
+
     readonly history: HistoryRecord[]  
 }

@@ -5,21 +5,32 @@ import { CreateHistoryDto } from './dto/create-history.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Saving } from './entities/saving.entity';
 import { Repository } from 'typeorm';
+import { SavingOperation } from './entities/savingOperation';
 
 @Injectable()
 export class SavingsService {
     constructor(
         @InjectRepository(Saving)
         private readonly savingRepository: Repository<Saving>,
+        @InjectRepository(SavingOperation)
+        private readonly savingOperationRepository: Repository<SavingOperation>
     ) {}
         
-    create(createSavingDto: CreateSavingDto, user: number) {
+    async create(createSavingDto: CreateSavingDto, user: number) {
         const saving = this.savingRepository.create({
             ...createSavingDto,
             user: {id: user},
+        })
+
+        const savedSaving = await this.savingRepository.save(saving);
+
+        const savingOperation = this.savingOperationRepository.create({
+            amount: createSavingDto.amount,
+            saving: {id: savedSaving.id},
         }) 
 
-        return this.savingRepository.save(saving)
+        await this.savingOperationRepository.save(savingOperation)
+        return savedSaving
     }
 
     findAll(user: number) {
@@ -51,7 +62,7 @@ export class SavingsService {
 
         if(updateSavingDto.amount) {
             saving.history.push({
-                date: new Date(),
+                date: new Date().toISOString().split('T')[0],
                 amount: updateSavingDto.amount
             })
         }
@@ -71,6 +82,13 @@ export class SavingsService {
     }
 
     async createHistory(id: number, user: number, createHistoryDto: CreateHistoryDto) {
-        return 'Works good'
+        const saving = await this.savingRepository.preload({id: +id})
+        saving.history.push(createHistoryDto)
+        
+        saving.history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        await this.savingRepository.save(saving)
+        
+        return await this.findAll(user)
     }
 }

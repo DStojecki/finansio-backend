@@ -3,6 +3,7 @@ import { User } from '../users/entities/user.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
 import { Saving } from 'src/savings/entities/saving.entity';
+import { SavingOperation } from 'src/savings/entities/savingOperation';
 
 config();
 
@@ -15,7 +16,7 @@ export const dataSourceOptions: DataSourceOptions & SeederOptions = {
     database: process.env.DATABASE_NAME,
     synchronize: true,
     seeds: ['src/database/seeders/**/*.{js,ts}'],
-    entities: [User, Saving]
+    entities: [User, Saving, SavingOperation]
 };
 
 

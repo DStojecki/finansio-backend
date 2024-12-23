@@ -1,11 +1,11 @@
 import { User } from 'src/users/entities/user.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { SavingOperation } from './savingOperation';
 
 export type HistoryRecord = {
-    date: Date
+    date: string
     amount: number
 }
-
 @Entity()
 export class Saving {
     @PrimaryGeneratedColumn()
@@ -14,6 +14,9 @@ export class Saving {
     @ManyToOne(() => User, (user) => user.savings)
     user: User
 
+    @OneToMany(() => SavingOperation, savingOperation=>savingOperation.saving)
+    operations: SavingOperation[]
+    
     @Column()
     name: string
 
@@ -22,5 +25,4 @@ export class Saving {
 
     @Column()
     currency: string
-
 }
