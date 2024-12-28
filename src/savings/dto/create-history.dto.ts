@@ -5,5 +5,5 @@ export class CreateHistoryDto {
     readonly amount: number 
 
     @IsString()
-    readonly date: string
+    readonly created_at: string
 }

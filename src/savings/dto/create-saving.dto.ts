@@ -1,6 +1,4 @@
-import { IsString } from 'class-validator'
-import type { HistoryRecord}  from '../entities/saving.entity'
-
+import { IsNumber, IsString } from 'class-validator'
 
 export class CreateSavingDto {
     @IsString()
@@ -9,7 +7,7 @@ export class CreateSavingDto {
     @IsString()
     readonly currency: string;
 
+    @IsNumber()
     readonly amount: number;
 
-    readonly history: HistoryRecord[]  
 }

@@ -1,19 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateSavingDto } from './dto/create-saving.dto';
-import { UpdateSavingDto } from './dto/update-saving.dto';
-import { CreateHistoryDto } from './dto/create-history.dto';
+import { CreateSavingDto } from '../dto/create-saving.dto';
+import { UpdateSavingDto } from '../dto/update-saving.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Saving } from './entities/saving.entity';
+import { Saving } from '../entities/saving.entity';
 import { Repository } from 'typeorm';
-import { SavingOperation } from './entities/savingOperation';
+import { calculatePercentageChange } from 'src/utils/utils';
+import { SavingsOperationService } from '../savings-operation/savings-operation.service';
 
 @Injectable()
 export class SavingsService {
     constructor(
+        private savingOperationService: SavingsOperationService,
         @InjectRepository(Saving)
         private readonly savingRepository: Repository<Saving>,
-        @InjectRepository(SavingOperation)
-        private readonly savingOperationRepository: Repository<SavingOperation>
     ) {}
         
     async create(createSavingDto: CreateSavingDto, user: number) {
@@ -24,22 +23,37 @@ export class SavingsService {
 
         const savedSaving = await this.savingRepository.save(saving);
 
-        const savingOperation = this.savingOperationRepository.create({
-            amount: createSavingDto.amount,
-            saving: {id: savedSaving.id},
-        }) 
+        await this.savingOperationService.create(createSavingDto.amount, savedSaving.id)
 
-        await this.savingOperationRepository.save(savingOperation)
         return savedSaving
     }
+    
 
-    findAll(user: number) {
-        return this.savingRepository.find({
+    async findAll(user: number) {
+        let all = await this.savingRepository.find({
             where: {
                 user: { id: user },
             },
-            relations: ['user'], // Include if you need user details in the result
+            relations: ['user'],
         });
+
+        all = await Promise.all(
+            all.map(async (one) => {
+                const latestOperations = await this.savingOperationService.getLastTwoOperations(one.id)
+                let percentageChange = null
+                
+                if(latestOperations.length === 2) {
+                    percentageChange = calculatePercentageChange(latestOperations[1].amount, latestOperations[0].amount)
+                }
+                return {
+                    ...one,
+                    amount: latestOperations[0].amount, 
+                    lastUpdate: latestOperations[0].created_at,
+                    percentageChange: percentageChange
+                };
+            }),
+        );
+        return all
     }
 
     async findOne(id: number) {
@@ -61,10 +75,7 @@ export class SavingsService {
         })
 
         if(updateSavingDto.amount) {
-            saving.history.push({
-                date: new Date().toISOString().split('T')[0],
-                amount: updateSavingDto.amount
-            })
+            await this.savingOperationService.create(updateSavingDto.amount, id)
         }
 
         if (!saving) {
@@ -78,17 +89,7 @@ export class SavingsService {
     async remove(id: number) {
         const saving = await this.findOne(id)
 
+        await this.savingOperationService.removeReletedOperations(id)
         this.savingRepository.remove(saving)
-    }
-
-    async createHistory(id: number, user: number, createHistoryDto: CreateHistoryDto) {
-        const saving = await this.savingRepository.preload({id: +id})
-        saving.history.push(createHistoryDto)
-        
-        saving.history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        await this.savingRepository.save(saving)
-        
-        return await this.findAll(user)
     }
 }

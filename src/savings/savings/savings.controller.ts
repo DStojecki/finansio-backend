@@ -1,8 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Headers } from '@nestjs/common';
 import { SavingsService } from './savings.service';
-import { CreateSavingDto } from './dto/create-saving.dto';
-import { UpdateSavingDto } from './dto/update-saving.dto';
-import { CreateHistoryDto } from './dto/create-history.dto';
+import { CreateSavingDto } from '../dto/create-saving.dto';
+import { UpdateSavingDto } from '../dto/update-saving.dto';
 
 @Controller('savings')
 export class SavingsController {
@@ -26,11 +25,6 @@ export class SavingsController {
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.savingsService.findOne(+id);
-    }
-
-    @Post(':id/history')
-    createHistory(@Param('id') id: string, @Body() createHistoryDto: CreateHistoryDto, @Headers('user') user: number) {
-        return this.savingsService.createHistory(+id, user, createHistoryDto);
     }
 
     @Patch(':id')
