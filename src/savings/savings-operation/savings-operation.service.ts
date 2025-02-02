@@ -4,7 +4,8 @@ import { SavingOperation } from '../entities/savingOperation';
 import { Repository } from 'typeorm';
 import { CreateHistoryDto } from '../dto/create-history.dto';
 import { SavingsService } from '../savings/savings.service';
-
+import * as dayjs from 'dayjs';
+import { Saving } from '../entities/saving.entity';
 @Injectable()
 export class SavingsOperationService {
     constructor(
@@ -23,6 +24,21 @@ export class SavingsOperationService {
         });
 
         return savingOperations
+    }
+
+    async findInPeriod(period:number, user: number) {
+        if (period <= 12) {
+            return this.getMonthlyData(user, period);
+          } else {
+            return this.getYearlyData(user, period);
+          }
+    }
+    private async getMonthlyData(userId: number, period: number) {
+
+    }
+        
+    private async getYearlyData(userId: number, period: number) {
+        
     }
 
     async create(amount:number, id:number) {

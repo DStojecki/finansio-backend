@@ -20,9 +20,6 @@ export class Saving {
     @Column()
     name: string
 
-    @Column({ type: 'jsonb', nullable: true })
-    history: HistoryRecord[]
-
     @Column()
     currency: string
 }

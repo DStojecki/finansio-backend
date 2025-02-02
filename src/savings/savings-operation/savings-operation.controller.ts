@@ -13,6 +13,14 @@ export class SavingOperationController {
         return this.savingsOperationService.findAll(id);
     }
 
+    @Get('period/:period')
+    findInPeriod(
+        @Param('period') period: number,
+        @Headers('user') user: number
+    ) {
+        return this.savingsOperationService.findInPeriod(period, user);
+    }
+
     @Post(':id/history')
     createHistory(@Param('id') id: string, @Body() createHistoryDto: CreateHistoryDto, @Headers('user') user: number) {
         return this.savingsOperationService.createHistory(+id, user, createHistoryDto);
