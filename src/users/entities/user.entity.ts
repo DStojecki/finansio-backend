@@ -1,4 +1,4 @@
-import { Saving } from 'src/savings/entities/saving.entity';
+import { Saving } from '../../savings/entities/saving.entity';
 import { Column, Entity, PrimaryGeneratedColumn, OneToMany  } from 'typeorm';
 
 @Entity()

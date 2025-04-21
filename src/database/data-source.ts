@@ -2,8 +2,8 @@ import { config } from 'dotenv';
 import { User } from '../users/entities/user.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
-import { Saving } from 'src/savings/entities/saving.entity';
-import { SavingOperation } from 'src/savings/entities/savingOperation';
+import { Saving } from '../savings/entities/saving.entity';
+import { SavingOperation } from '../savings/entities/savingOperation';
 
 config();
 

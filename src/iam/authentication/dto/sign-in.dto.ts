@@ -5,6 +5,6 @@ export class SignInDto {
     @IsEmail()
     email: string
 
-    @MinLength(10)
+    @MinLength(8)
     password: string
 }

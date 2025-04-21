@@ -7,22 +7,21 @@ export class SavingOperationController {
     constructor(private readonly savingsOperationService: SavingsOperationService) {}
 
     @Get(':id')
-    findAll(
-        @Param('id') id: number
-    ) {
+    findAll(@Param('id') id: number) {
         return this.savingsOperationService.findAll(id);
     }
 
     @Get('period/:period')
-    findInPeriod(
-        @Param('period') period: number,
-        @Headers('user') user: number
-    ) {
+    findInPeriod(@Param('period') period: number, @Headers('user') user: number) {
         return this.savingsOperationService.findInPeriod(period, user);
     }
 
     @Post(':id/history')
-    createHistory(@Param('id') id: string, @Body() createHistoryDto: CreateHistoryDto, @Headers('user') user: number) {
+    createHistory(
+        @Param('id') id: string,
+        @Body() createHistoryDto: CreateHistoryDto,
+        @Headers('user') user: number,
+    ) {
         return this.savingsOperationService.createHistory(+id, user, createHistoryDto);
     }
 }

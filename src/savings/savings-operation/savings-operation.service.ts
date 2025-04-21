@@ -4,8 +4,12 @@ import { SavingOperation } from '../entities/savingOperation';
 import { Repository } from 'typeorm';
 import { CreateHistoryDto } from '../dto/create-history.dto';
 import { SavingsService } from '../savings/savings.service';
-import * as dayjs from 'dayjs';
+const dayjs = require('dayjs');
+const isBetween = require('dayjs/plugin/isBetween');
 import { Saving } from '../entities/saving.entity';
+
+dayjs.extend(isBetween);
+
 @Injectable()
 export class SavingsOperationService {
     constructor(
@@ -34,11 +38,95 @@ export class SavingsOperationService {
           }
     }
     private async getMonthlyData(userId: number, period: number) {
+        const endDate = dayjs();
+        const startDate = endDate.subtract(period - 1, 'month').startOf('month');
 
+        const query = this.savingOperationRepository
+            .createQueryBuilder('operation')
+            .leftJoinAndSelect('operation.saving', 'saving')
+            .leftJoin('saving.user', 'user')
+            .where('user.id = :userId', { userId })
+            .andWhere('operation.created_at >= :startDate', { startDate: startDate.toDate() })
+            .orderBy('operation.created_at', 'DESC');
+
+        const operations = await query.getMany();
+
+        const monthlyData = [];
+        for (let i = 0; i < period; i++) {
+            const currentMonth = endDate.subtract(i, 'month');
+            const monthStart = currentMonth.startOf('month');
+            const monthEnd = currentMonth.endOf('month');
+
+            // Filter operations for current month
+            const monthOperations = operations.filter(op => 
+                dayjs(op.created_at).isBetween(monthStart, monthEnd, 'day', '[]')
+            );
+
+            // Group by saving and get latest operation for each saving
+            const savingMap = new Map();
+            monthOperations.forEach(op => {
+                const savingId = op.saving.id;
+                // Only update if we haven't seen this saving yet or if this operation is newer
+                if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
+                    savingMap.set(savingId, op);
+                }
+            });
+
+            // Convert map values to array and sort by created_at in descending order
+            const latestOperations = [...savingMap.values()].sort((a, b) => 
+                dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()
+            );
+
+            monthlyData.unshift(latestOperations);
+        }
+
+        return monthlyData;
     }
         
     private async getYearlyData(userId: number, period: number) {
-        
+        const endDate = dayjs();
+        const startDate = endDate.subtract(period - 1, 'year').startOf('year');
+
+        const query = this.savingOperationRepository
+            .createQueryBuilder('operation')
+            .leftJoinAndSelect('operation.saving', 'saving')
+            .leftJoin('saving.user', 'user')
+            .where('user.id = :userId', { userId })
+            .andWhere('operation.created_at >= :startDate', { startDate: startDate.toDate() })
+            .orderBy('operation.created_at', 'DESC');
+
+        const operations = await query.getMany();
+
+        const yearlyData = [];
+        for (let i = 0; i < period; i++) {
+            const currentYear = endDate.subtract(i, 'year');
+            const yearStart = currentYear.startOf('year');
+            const yearEnd = currentYear.endOf('year');
+
+            // Filter operations for current year
+            const yearOperations = operations.filter(op => 
+                dayjs(op.created_at).isBetween(yearStart, yearEnd, 'day', '[]')
+            );
+
+            // Group by saving and get latest operation for each saving
+            const savingMap = new Map();
+            yearOperations.forEach(op => {
+                const savingId = op.saving.id;
+                // Only update if we haven't seen this saving yet or if this operation is newer
+                if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
+                    savingMap.set(savingId, op);
+                }
+            });
+
+            // Convert map values to array and sort by created_at in descending order
+            const latestOperations = [...savingMap.values()].sort((a, b) => 
+                dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()
+            );
+
+            yearlyData.unshift(latestOperations);
+        }
+
+        return yearlyData;
     }
 
     async create(amount:number, id:number) {
