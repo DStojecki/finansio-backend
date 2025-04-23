@@ -46,7 +46,7 @@ export class SavingsOperationService {
             .leftJoinAndSelect('operation.saving', 'saving')
             .leftJoin('saving.user', 'user')
             .where('user.id = :userId', { userId })
-            .andWhere('operation.created_at >= :startDate', { startDate: startDate.toDate() })
+            .andWhere('operation.created_at >= :startDate', { startDate: startDate.subtract(1, 'month').toDate() })
             .orderBy('operation.created_at', 'DESC');
 
         const operations = await query.getMany();
@@ -62,11 +62,29 @@ export class SavingsOperationService {
                 dayjs(op.created_at).isBetween(monthStart, monthEnd, 'day', '[]')
             );
 
+            // If no operations in current month, find the most recent operation before this month
+            if (monthOperations.length === 0) {
+                const previousOperations = operations.filter(op => 
+                    dayjs(op.created_at).isBefore(monthStart)
+                );
+                
+                if (previousOperations.length > 0) {
+                    // Group by saving and get latest operation for each saving from previous operations
+                    const savingMap = new Map();
+                    previousOperations.forEach(op => {
+                        const savingId = op.saving.id;
+                        if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
+                            savingMap.set(savingId, op);
+                        }
+                    });
+                    monthOperations.push(...savingMap.values());
+                }
+            }
+
             // Group by saving and get latest operation for each saving
             const savingMap = new Map();
             monthOperations.forEach(op => {
                 const savingId = op.saving.id;
-                // Only update if we haven't seen this saving yet or if this operation is newer
                 if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
                     savingMap.set(savingId, op);
                 }
@@ -92,7 +110,7 @@ export class SavingsOperationService {
             .leftJoinAndSelect('operation.saving', 'saving')
             .leftJoin('saving.user', 'user')
             .where('user.id = :userId', { userId })
-            .andWhere('operation.created_at >= :startDate', { startDate: startDate.toDate() })
+            .andWhere('operation.created_at >= :startDate', { startDate: startDate.subtract(1, 'year').toDate() })
             .orderBy('operation.created_at', 'DESC');
 
         const operations = await query.getMany();
@@ -108,11 +126,29 @@ export class SavingsOperationService {
                 dayjs(op.created_at).isBetween(yearStart, yearEnd, 'day', '[]')
             );
 
+            // If no operations in current year, find the most recent operation before this year
+            if (yearOperations.length === 0) {
+                const previousOperations = operations.filter(op => 
+                    dayjs(op.created_at).isBefore(yearStart)
+                );
+                
+                if (previousOperations.length > 0) {
+                    // Group by saving and get latest operation for each saving from previous operations
+                    const savingMap = new Map();
+                    previousOperations.forEach(op => {
+                        const savingId = op.saving.id;
+                        if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
+                            savingMap.set(savingId, op);
+                        }
+                    });
+                    yearOperations.push(...savingMap.values());
+                }
+            }
+
             // Group by saving and get latest operation for each saving
             const savingMap = new Map();
             yearOperations.forEach(op => {
                 const savingId = op.saving.id;
-                // Only update if we haven't seen this saving yet or if this operation is newer
                 if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
                     savingMap.set(savingId, op);
                 }
@@ -140,10 +176,7 @@ export class SavingsOperationService {
 
     async removeReletedOperations(id:number) {
         const relatedOperations = await this.findAll(id)
-
-        relatedOperations.forEach(operation => {
-            this.savingOperationRepository.remove(operation)
-        })
+        await this.savingOperationRepository.remove(relatedOperations)
     }
 
     async getLastTwoOperations(id) {
