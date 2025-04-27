@@ -51,7 +51,20 @@ export class SavingsOperationService {
 
         const operations = await query.getMany();
 
+        // Get all unique saving IDs and their first operation dates
+        const allSavingIds = [...new Set(operations.map(op => op.saving.id))];
+        const firstOperationDates = new Map();
+        operations.forEach(op => {
+            const savingId = op.saving.id;
+            if (!firstOperationDates.has(savingId) || 
+                dayjs(op.created_at).isBefore(firstOperationDates.get(savingId))) {
+                firstOperationDates.set(savingId, dayjs(op.created_at));
+            }
+        });
+        
         const monthlyData = [];
+        let lastKnownValues = new Map(); // Track last known value for each saving
+
         for (let i = 0; i < period; i++) {
             const currentMonth = endDate.subtract(i, 'month');
             const monthStart = currentMonth.startOf('month');
@@ -62,40 +75,45 @@ export class SavingsOperationService {
                 dayjs(op.created_at).isBetween(monthStart, monthEnd, 'day', '[]')
             );
 
-            // If no operations in current month, find the most recent operation before this month
-            if (monthOperations.length === 0) {
-                const previousOperations = operations.filter(op => 
-                    dayjs(op.created_at).isBefore(monthStart)
-                );
-                
-                if (previousOperations.length > 0) {
-                    // Group by saving and get latest operation for each saving from previous operations
-                    const savingMap = new Map();
-                    previousOperations.forEach(op => {
-                        const savingId = op.saving.id;
-                        if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
-                            savingMap.set(savingId, op);
-                        }
-                    });
-                    monthOperations.push(...savingMap.values());
-                }
-            }
+            // Get all operations up to the end of current month for historical values
+            const operationsUpToMonth = operations.filter(op => 
+                !dayjs(op.created_at).isAfter(monthEnd)
+            );
 
-            // Group by saving and get latest operation for each saving
-            const savingMap = new Map();
-            monthOperations.forEach(op => {
+            // Update last known values with valid operations
+            operationsUpToMonth.forEach(op => {
                 const savingId = op.saving.id;
-                if (!savingMap.has(savingId) || dayjs(op.created_at).isAfter(dayjs(savingMap.get(savingId).created_at))) {
-                    savingMap.set(savingId, op);
+                if (!lastKnownValues.has(savingId) || 
+                    dayjs(op.created_at).isAfter(dayjs(lastKnownValues.get(savingId).created_at))) {
+                    lastKnownValues.set(savingId, op);
                 }
             });
 
-            // Convert map values to array and sort by created_at in descending order
-            const latestOperations = [...savingMap.values()].sort((a, b) => 
+            // For savings without operations this month, use their last known values
+            // but only if we're after their first operation
+            const monthResult = [];
+            allSavingIds.forEach(savingId => {
+                const firstOpDate = firstOperationDates.get(savingId);
+                // Only include if we're in or after the month of the first operation
+                if (firstOpDate && !monthStart.isBefore(firstOpDate.startOf('month'))) {
+                    const currentOp = monthOperations.find(op => op.saving.id === savingId);
+                    if (currentOp) {
+                        monthResult.push(currentOp);
+                    } else if (lastKnownValues.has(savingId)) {
+                        monthResult.push(lastKnownValues.get(savingId));
+                    }
+                }
+            });
+
+            // Sort by created_at in descending order
+            const sortedOperations = monthResult.sort((a, b) => 
                 dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()
             );
 
-            monthlyData.unshift(latestOperations);
+            monthlyData.unshift(sortedOperations);
+
+            // Reset lastKnownValues for next iteration to avoid using future values
+            lastKnownValues.clear();
         }
 
         return monthlyData;

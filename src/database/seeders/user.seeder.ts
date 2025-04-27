@@ -7,11 +7,19 @@ import { genSalt, hash } from 'bcrypt';
 const USERS = [
     {
         email: 'daniel@gmail.com',
-        password:  'testtesttest'
+        password:  'testtesttest',
+        data: {
+            firstName: 'Daniel',
+            lastName: 'Stojecki',
+        }
     },
     {
         email: 'kasia@gmail.com',
-        password:  'testtesttest'
+        password:  'testtesttest',
+        data: {
+            firstName: 'Kasia',
+            lastName: 'Kowalska',
+        }
     },
 ]
 
@@ -37,7 +45,11 @@ export default class UserSeeder implements Seeder {
 
                 const salt = await genSalt();
                 const hashedPassword = await hash(user.password, salt);
-                const entity = { password: hashedPassword, email: user.email };
+                const entity = { 
+                    password: hashedPassword, 
+                    email: user.email, 
+                    data: user.data as Record<string, any> 
+                };
 
                 await repository.insert(entity);
                 console.log(`Inserted user: ${user.email}`);

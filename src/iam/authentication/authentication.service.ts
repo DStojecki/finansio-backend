@@ -34,6 +34,7 @@ export class AuthenticationService {
         const user = new User();
         user.email = signUpDto.email;
         user.password = await this.hashingService.hash(signUpDto.password);
+        user.data = signUpDto.data;
   
         await this.usersRepository.save(user);
       } catch (err) {
@@ -70,7 +71,8 @@ export class AuthenticationService {
         return {
             user: {
                 email: user.email,
-                id: user.id
+                id: user.id,
+                data: user.data
             },
             ...tokens
         }

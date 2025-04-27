@@ -12,6 +12,9 @@ export class User {
   @Column()
   password: string;
 
+  @Column('jsonb', { default: {} })
+  data: Record<string, any>;
+
   @OneToMany(type => Saving, savings=>savings.user)
   savings: Saving[]
 }
